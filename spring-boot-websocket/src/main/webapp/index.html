@@ -1,0 +1,104 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+
+<head>
+	<title>websocket demo</title>
+</head>
+
+<body>
+
+<h1>websocket Example</h1>
+<button onClick="sendMsg()">订阅服务端主题</button><br/>
+收到服务端推送的消息：<span id="msg"></span>
+<hr/>
+<h2>处理服务端通过@SubscribeMapping注解配置的主题</h2>
+<button onClick="sendMsgSubscribe()">订阅服务端主题</button><br/>
+收到服务端推送的消息：<span id="msgSubscribe"></span>
+<hr/>
+<h2>向服务端发送消息并接收返回信息</h2>
+<input id="sendTxt" type="text"/><button onClick="sendMsgReceive()">发送</button><br/>
+收到服务端返回的消息：<span id="msgSend"></span>
+</html>
+<!--开发 模式 -->
+<script type="text/javascript" src="./lib/sockjs.js"></script>
+<script type="text/javascript" src="./lib/stomp.js"></script>
+
+<!--生产模式-->
+<!--<script type="text/javascript" src="./lib/sockjs.min.js"></script>
+<script type="text/javascript" src="./lib/stomp.min.js"></script>-->
+<script type="text/javascript">
+	//websock握手
+	function handshak(stomp){
+		//websock握手
+		if (stomp.connected){
+		    return ;
+		  }	
+		 
+		var headers = "";
+		stomp.connect({headers}, function (frame, req, res) {
+		});
+	}
+	
+	//订阅主题
+	function subscribe(stomp){
+		stomp.subscribe('/topic/spittlefeed', function (datas) {
+			document.getElementById("msg").textContent=datas.body;
+		});
+	}
+	
+	var sock = new SockJS('http://localhost:8080/spring-boot-websocket/gs-guide-websocket');
+	/**
+	 * 建立成功的回调函数
+	 */
+	sock.onopen = function() {
+	    console.log('open');
+	};
+	
+	/**
+	 * 服务器有消息返回的回调函数
+	 */
+	sock.onmessage = function(e) {
+	    console.log('message', e.data);
+	};
+	
+	/**
+	 * websocket链接关闭的回调函数
+	 */
+	sock.onclose = function() {
+	    console.log('close');
+	};
+	
+	var stomp = Stomp.over(sock);
+	
+	console.log("before:" + sock.readyState);
+	//websock握手
+	handshak(stomp);
+	console.log("after:" + sock.readyState);
+	
+	function sendMsg(){
+		
+		
+		//订阅主题
+		subscribe(stomp);
+	}
+	
+	function sendMsgSubscribe(){
+		stomp.subscribe('/app/subscribMessage', function (datas) {
+			document.getElementById("msgSubscribe").textContent=datas.body;
+		});
+	}
+	
+	//向服务端发送消息，并接收返回值
+	function sendMsgReceive(){
+		var value = document.getElementById("sendTxt").value;
+		stomp.send('/app/receive',{"content-type":"application/json"},JSON.stringify({"text":value}));
+		
+		//订阅/app/receive放回的消息
+		stomp.subscribe('/topic/receiveMsg', function (datas) {
+			var info = JSON.parse(datas.body);
+			console.log(info.text);
+			document.getElementById("msgSend").textContent=info.text;
+		});
+	}
+	
+</script>
